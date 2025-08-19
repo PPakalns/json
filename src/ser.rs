@@ -629,7 +629,19 @@ where
                     .map_err(Error::io));
                 *state = State::Rest;
 
-                tri!(key.serialize(MapKeySerializer { ser: *ser }));
+                match key.serialize(MapKeySerializer { ser: *ser }) {
+                    core::result::Result::Ok(val) => val,
+                    core::result::Result::Err(err) => {
+                        if matches!(err.error_code(), &ErrorCode::KeyMustBeAString) {
+                            let Ok(value) = crate::to_string(key) else {
+                                return core::result::Result::Err(err);
+                            };
+                            tri!(value.serialize(MapKeySerializer { ser: *ser }));
+                        } else {
+                            return core::result::Result::Err(err);
+                        }
+                    }
+                };
 
                 ser.formatter
                     .end_object_key(&mut ser.writer)

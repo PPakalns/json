@@ -25,6 +25,11 @@ pub struct Error {
 pub type Result<T> = result::Result<T, Error>;
 
 impl Error {
+    /// Retrieve error code
+    pub(crate) fn error_code(&self) -> &ErrorCode {
+        &self.err.code
+    }
+
     /// One-based line number at which the error was detected.
     ///
     /// Characters in the first line of the input (before the first newline
