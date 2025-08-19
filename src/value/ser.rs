@@ -404,7 +404,19 @@ impl serde::ser::SerializeMap for SerializeMap {
     {
         match self {
             SerializeMap::Map { next_key, .. } => {
-                *next_key = Some(tri!(key.serialize(MapKeySerializer)));
+                *next_key = Some(match key.serialize(MapKeySerializer) {
+                    core::result::Result::Ok(val) => val,
+                    core::result::Result::Err(err) => {
+                        if matches!(err.error_code(), &ErrorCode::KeyMustBeAString) {
+                            let Ok(value) = crate::to_string(key) else {
+                                return core::result::Result::Err(err);
+                            };
+                            tri!(value.serialize(MapKeySerializer))
+                        } else {
+                            return core::result::Result::Err(err);
+                        }
+                    }
+                });
                 Ok(())
             }
             #[cfg(feature = "arbitrary_precision")]
